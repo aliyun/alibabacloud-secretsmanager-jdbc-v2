@@ -1,0 +1,75 @@
+package com.aliyun.kms.secretsmanager.v2;
+
+import com.aliyun.kms.secretsmanager.v2.utils.Constants;
+import com.aliyun.tea.utils.StringUtils;
+import com.aliyuncs.kms.secretsmanager.client.v2.SecretCacheClient;
+import com.aliyuncs.kms.secretsmanager.client.v2.service.UserAgentManager;
+
+import java.sql.SQLException;
+
+
+public class MysqlSecretsManagerDriver extends SecretsManagerDriver {
+
+    public static final int LOGIN_FAILED_CODE = 1045;
+
+    static {
+        UserAgentManager.registerUserAgent(Constants.MYSQL_DRIVER_JAVA_OF_USER_AGENT, Constants.MYSQL_DRIVER_JAVA_OF_USER_AGENT_PRIORITY, Constants.PROJECT_VERSION);
+    }
+
+    protected MysqlSecretsManagerDriver() {
+        super();
+    }
+
+    public MysqlSecretsManagerDriver(SecretCacheClient secretCacheClient) {
+        super(secretCacheClient);
+    }
+
+    public MysqlSecretsManagerDriver(SecretCacheClient secretCacheClient, String urlUnique) {
+        super(secretCacheClient, urlUnique);
+    }
+
+    @Override
+    protected String getRealDriverClass() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver", false, this.getClass().getClassLoader());
+            return "com.mysql.cj.jdbc.Driver";
+        } catch (ClassNotFoundException e) {
+            return "com.mysql.jdbc.Driver";
+        }
+    }
+
+    @Override
+    public String contactUrl(String endpoint, String port, String dbName) {
+        String url = "jdbc:mysql://" + endpoint;
+        if (!StringUtils.isEmpty(port)) {
+            url += ":" + port;
+        }
+        if (!StringUtils.isEmpty(dbName)) {
+            url += "/" + dbName;
+        }
+        return url;
+    }
+
+    @Override
+    protected boolean isAuthError(Exception e) {
+        if (e instanceof SQLException) {
+            SQLException sqle = (SQLException) e;
+            int errorCode = sqle.getErrorCode();
+            if (errorCode == LOGIN_FAILED_CODE) {
+                return true;
+            }
+        }
+        return isCJAuthError(e);
+    }
+
+    private boolean isCJAuthError(Exception e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof SQLException) {
+            SQLException sqlEx = (SQLException) cause;
+            return sqlEx.getErrorCode() == LOGIN_FAILED_CODE;
+        } else if (cause != null && "com.mysql.cj.exceptions.CJException".equals(cause.getClass().getName())) {
+            return ((com.mysql.cj.exceptions.CJException) cause).getVendorCode() == LOGIN_FAILED_CODE;
+        }
+        return false;
+    }
+}
