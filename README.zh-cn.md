@@ -219,8 +219,6 @@ cache_client_region_id=[{"regionId":"<regionId>"}]
 spring.datasource.url=secrets-manager:mysql://<your-mysql-ip>:<your-mysql-port>/<your-database-name>
 spring.datasource.username=#your-mysql-secret-name#
 spring.datasource.password=
-# URL 不以 "jdbc:" 开头，必须显式指定 driver 类，否则 Spring Boot 启动时
-# 无法从 URL 推导 driver。
 spring.datasource.driver-class-name=com.aliyun.kms.secretsmanager.v2.MysqlSecretsManagerSimpleDriver
   ```
 
